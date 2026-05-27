@@ -1053,7 +1053,8 @@ function boot() {
    ============================================ */
 
 function updateToggleLabels() {
-  document.getElementById('lang-toggle').textContent = lang === 'ja' ? 'EN' : '日本語';
+  // ボタンには現在の言語を表示(押すと反対側に切り替わる)
+  document.getElementById('lang-toggle').textContent = lang === 'ja' ? '日本語' : 'English';
   const themeBtn = document.getElementById('theme-toggle');
   if (theme === 'dark') themeBtn.textContent = '☀';
   else if (theme === 'light') themeBtn.textContent = '☾';
