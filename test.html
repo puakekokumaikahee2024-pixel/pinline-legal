@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pinline view.html — テスト</title>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", sans-serif;
+    max-width: 600px;
+    margin: 40px auto;
+    padding: 20px;
+    background: #fdfbf7;
+    color: #1a1814;
+    line-height: 1.6;
+  }
+  h1 { font-size: 24px; margin-bottom: 8px; }
+  .lead { color: #666; margin-bottom: 32px; font-size: 14px; }
+  .btn {
+    display: block;
+    width: 100%;
+    padding: 16px;
+    margin: 12px 0;
+    font-size: 16px;
+    background: #c4452e;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    text-align: center;
+    text-decoration: none;
+    font-weight: 600;
+  }
+  .btn:hover { background: #a83820; }
+  .btn-secondary { background: #f5f1e8; color: #1a1814; border: 1px solid #d8d2c4; }
+  .note { font-size: 13px; color: #888; margin-top: 24px; padding: 16px; background: #f5f1e8; border-radius: 6px; }
+  @media (prefers-color-scheme: dark) {
+    body { background: #1a1814; color: #f0ebe0; }
+    .btn-secondary { background: #2a2620; color: #f0ebe0; border-color: #3a3530; }
+    .note { background: #2a2620; color: #c8c2b3; }
+  }
+</style>
+</head>
+<body>
+
+<h1>Pinline view.html 動作テスト</h1>
+<p class="lead">下のボタンを押すと、サンプル旅程で view.html を開きます。</p>
+
+<a class="btn" href="view.html?d=H4sIAGU3FmoC_61U3U_aUBT_V0yftgTx9gta3nwzyx724NvmQyeojUAJoIszJvZ2JjhndLqNDM3Exbko-DXiMH7-McdS-S92ekUpFOc0S5qmvff0nt9XzyQ3zkX4AJfVs_EYF-HAWgBrD-iGXfndJdbyP-pflsHcreVnuACXyWrpLBYJRAh1E7lbUPsJibArSAjBilgy6tkX-fb9RCzxOpbOcBExwEW1CXx4OcklGYKolo399eyUnmzUawm30jk_cz7tO1vHtaO9LqdcFoFegHUK1hpY78Eq4SdxDeGKclCWVAnfksPYSVSD4bCquJQTbQ15paVhdCzNRVQS4LRBl3U2rSUzKQMVwG_f4kJvRtd6-o3RCcNdSRhR97ih-ISOfdwFHYlJCmGsDdyyV87qhRWnWgDLBPoTLAuoKzVYFaH2laLS9uw8TNNXyWe9z4GWgG7iVoPVtNnXK8nK5fkFNxW41QBoBck2DmZK3LDmkaaoKA3W3bwcChJJDnWiTZSI2E47dDftF9qgPqQP9vQZSSM-Fh_zkI-m9XEve0H2YrWW0BWwci4pljGGfgfod7CWwSozQY48BFRBlJoE5KCihDvaRvy2ibf440Z0uIHpHvRvtPioF33TOb9hYioB06tgFsH8gN7U8ltATTBLV_NVZ3aLrX-sFxfxDnSOmxpgOqAgvpyL5L6cg5W_DjTmoX6y5BRp7bBq__IKxYsh3iuUTGSfUG4j1S8UL9wqldGHR7KZWOzf1Gr3WpKbcqGjdJvFdw0o-rqOylyeFsDMoRpgzgGlmHOcLs67U5SotoP1pn0xUy_mWtJ9M4wcs2QfHGDMndKcPVO2V5c85CVebUmJoCgd2fO8n70g_Sf2KmnBvcNSssFMqzD3UI5zNp1yHughQVK90NUwCfl-wERMiz8CUTO9OFvs3EltddveLaDsQA_ZWDlx84x_I2q7iL4sgLkC5mYzq6I_q_y9WW2wxbM_A11nhL-5d3p883Bw3darQot9qhri_fbx7pQid0-pzIiRSj3OOoH8daA-sY_2r6p7Tx86WBFyp8SpDxyszEr0ZGDqD4zGg9mrBwAA">サンプル旅程を表示(ハワイ島3日間)</a>
+
+<a class="btn btn-secondary" href="view.html">エラー画面を確認(データなし)</a>
+
+<div class="note">
+  <strong>このページの役割:</strong><br>
+  view.html が正しく動くか、長い URL を手でコピーせずに確認できます。<br><br>
+  <strong>確認後はこのページ(test.html)は削除して構いません。</strong>本番では Pinline アプリが生成した URL を直接使うので、test.html は不要です。
+</div>
+
+</body>
+</html>
