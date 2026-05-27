@@ -1,0 +1,1095 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#fdfbf7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1a1814" media="(prefers-color-scheme: dark)">
+<title>Pinline - 旅のしおり</title>
+<meta name="description" content="Pinline で作成された旅のしおり">
+
+<!-- Open Graph -->
+<meta property="og:title" content="Pinline - 旅のしおり">
+<meta property="og:description" content="地図とタイムラインで見る旅程">
+<meta property="og:type" content="website">
+
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="anonymous">
+
+<style>
+/* ============================================
+   Pinline view.html — editorial travel zine
+   ============================================ */
+
+:root {
+  /* Light theme — paper-like, warm */
+  --bg: #fdfbf7;
+  --bg-elevated: #ffffff;
+  --bg-muted: #f5f1e8;
+  --ink: #1a1814;
+  --ink-soft: #4a4640;
+  --ink-faint: #8a8479;
+  --rule: #d8d2c4;
+  --rule-soft: #ebe6da;
+  --accent: #c4452e;          /* terracotta — stamp-like */
+  --accent-soft: #e8d4cf;
+  --tz-bg: #f0e9d8;
+  --tz-ink: #6b5d3a;
+
+  --font-display: "Cormorant Garamond", "Hiragino Mincho ProN", "Noto Serif JP", "Yu Mincho", serif;
+  --font-body: "Inter", "Hiragino Sans", "Noto Sans JP", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: "JetBrains Mono", "SF Mono", ui-monospace, monospace;
+
+  --radius: 4px;
+  --radius-lg: 8px;
+  --shadow: 0 1px 2px rgba(26, 24, 20, 0.04), 0 4px 12px rgba(26, 24, 20, 0.05);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1a1814;
+    --bg-elevated: #232019;
+    --bg-muted: #2a2620;
+    --ink: #f0ebe0;
+    --ink-soft: #c8c2b3;
+    --ink-faint: #807a6c;
+    --rule: #3a3530;
+    --rule-soft: #2e2a23;
+    --accent: #e87862;
+    --accent-soft: #4a2e26;
+    --tz-bg: #2e2920;
+    --tz-ink: #c8b88a;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 12px rgba(0, 0, 0, 0.3);
+  }
+}
+
+[data-theme="light"] {
+  --bg: #fdfbf7; --bg-elevated: #ffffff; --bg-muted: #f5f1e8;
+  --ink: #1a1814; --ink-soft: #4a4640; --ink-faint: #8a8479;
+  --rule: #d8d2c4; --rule-soft: #ebe6da;
+  --accent: #c4452e; --accent-soft: #e8d4cf;
+  --tz-bg: #f0e9d8; --tz-ink: #6b5d3a;
+  --shadow: 0 1px 2px rgba(26,24,20,.04), 0 4px 12px rgba(26,24,20,.05);
+}
+[data-theme="dark"] {
+  --bg: #1a1814; --bg-elevated: #232019; --bg-muted: #2a2620;
+  --ink: #f0ebe0; --ink-soft: #c8c2b3; --ink-faint: #807a6c;
+  --rule: #3a3530; --rule-soft: #2e2a23;
+  --accent: #e87862; --accent-soft: #4a2e26;
+  --tz-bg: #2e2920; --tz-ink: #c8b88a;
+  --shadow: 0 1px 2px rgba(0,0,0,.3), 0 4px 12px rgba(0,0,0,.3);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  min-height: 100vh;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Subtle paper grain */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: .35;
+  z-index: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .04 0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+@media (prefers-color-scheme: dark) {
+  body::before { opacity: .25; }
+}
+
+/* ============================================
+   Layout
+   ============================================ */
+
+.container {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 0 20px;
+  position: relative;
+  z-index: 1;
+}
+
+/* ============================================
+   Top bar — language + theme toggle
+   ============================================ */
+
+.topbar {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 14px 20px 0;
+  max-width: 720px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 2;
+}
+
+.topbar button {
+  background: var(--bg-elevated);
+  border: 1px solid var(--rule);
+  color: var(--ink-soft);
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  padding: 6px 12px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.topbar button:hover {
+  border-color: var(--ink-faint);
+  color: var(--ink);
+}
+
+/* ============================================
+   Cover header — magazine masthead style
+   ============================================ */
+
+.cover {
+  text-align: center;
+  padding: 48px 0 32px;
+  border-bottom: 1px solid var(--rule);
+  margin-bottom: 40px;
+  position: relative;
+}
+
+.cover::before {
+  content: "";
+  display: block;
+  width: 48px;
+  height: 1px;
+  background: var(--accent);
+  margin: 0 auto 24px;
+}
+
+.cover-eyebrow {
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 16px;
+}
+
+.cover-title {
+  font-family: var(--font-display);
+  font-size: clamp(36px, 8vw, 56px);
+  font-weight: 500;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  margin-bottom: 20px;
+  font-style: italic;
+}
+
+.cover-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 13px;
+  color: var(--ink-soft);
+  letter-spacing: 0.02em;
+}
+
+.cover-meta-divider {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--ink-faint);
+}
+
+/* ============================================
+   Day section
+   ============================================ */
+
+.day {
+  margin-bottom: 56px;
+}
+
+.day-header {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  margin-bottom: 24px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid var(--ink);
+}
+
+.day-number {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.day-label {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 500;
+  font-style: italic;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+
+.day-date {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--ink-faint);
+  letter-spacing: 0.05em;
+}
+
+/* ============================================
+   Day map
+   ============================================ */
+
+.day-map {
+  width: 100%;
+  height: 240px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--rule);
+  overflow: hidden;
+  margin-bottom: 28px;
+  background: var(--bg-muted);
+  box-shadow: var(--shadow);
+}
+
+/* Numbered pin marker */
+.pin-marker {
+  background: var(--accent);
+  color: white;
+  width: 28px;
+  height: 28px;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid white;
+  box-shadow: 0 2px 6px rgba(0,0,0,.3);
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 12px;
+}
+.pin-marker span { transform: rotate(45deg); }
+
+/* ============================================
+   Pin (timeline entry)
+   ============================================ */
+
+.pin {
+  position: relative;
+  padding-left: 56px;
+  padding-bottom: 28px;
+}
+
+.pin:not(:last-child)::before {
+  content: "";
+  position: absolute;
+  left: 19px;
+  top: 32px;
+  bottom: -4px;
+  width: 1px;
+  background: var(--rule);
+}
+
+.pin-number {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--bg-elevated);
+  border: 1px solid var(--rule);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--ink);
+  z-index: 1;
+}
+
+.pin-header {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 4px;
+  flex-wrap: wrap;
+}
+
+.pin-time {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  letter-spacing: 0.02em;
+}
+
+.pin-time-undefined {
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: var(--ink-faint);
+  font-style: italic;
+}
+
+.tz-badge {
+  display: inline-block;
+  background: var(--tz-bg);
+  color: var(--tz-ink);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  padding: 2px 6px;
+  border-radius: 3px;
+  vertical-align: middle;
+}
+
+.pin-duration {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-faint);
+}
+
+.pin-name {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 500;
+  line-height: 1.3;
+  color: var(--ink);
+  margin: 6px 0 8px;
+}
+
+.pin-act {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--ink-soft);
+  margin-bottom: 8px;
+}
+
+.pin-memo {
+  font-size: 14px;
+  color: var(--ink-soft);
+  line-height: 1.65;
+  margin: 10px 0;
+  padding: 10px 14px;
+  background: var(--bg-muted);
+  border-left: 2px solid var(--accent);
+  border-radius: 2px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.pin-coords {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-faint);
+  margin-top: 6px;
+}
+
+.pin-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.pin-actions a {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink-soft);
+  text-decoration: none;
+  padding: 6px 10px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--bg-elevated);
+  transition: all 0.15s ease;
+  letter-spacing: 0.02em;
+}
+
+.pin-actions a:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* ============================================
+   Travel segment (between pins)
+   ============================================ */
+
+.travel {
+  margin: 4px 0 4px 56px;
+  padding: 6px 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--ink-faint);
+  background: var(--bg-muted);
+  border-radius: 999px;
+  font-family: var(--font-body);
+  letter-spacing: 0.02em;
+}
+
+/* ============================================
+   Footer
+   ============================================ */
+
+.footer {
+  text-align: center;
+  padding: 48px 0 32px;
+  border-top: 1px solid var(--rule);
+  margin-top: 24px;
+}
+
+.footer-mark {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 16px;
+  color: var(--ink-soft);
+  margin-bottom: 4px;
+}
+
+.footer-note {
+  font-size: 11px;
+  color: var(--ink-faint);
+  letter-spacing: 0.05em;
+}
+
+/* ============================================
+   Error states
+   ============================================ */
+
+.error-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 70vh;
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.error-mark {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 80px;
+  color: var(--accent);
+  opacity: 0.5;
+  line-height: 1;
+  margin-bottom: 24px;
+}
+
+.error-title {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 500;
+  font-style: italic;
+  color: var(--ink);
+  margin-bottom: 12px;
+}
+
+.error-message {
+  font-size: 14px;
+  color: var(--ink-soft);
+  max-width: 360px;
+  line-height: 1.6;
+}
+
+/* ============================================
+   Page load animation
+   ============================================ */
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.cover, .day {
+  animation: fadeUp 0.5s ease-out backwards;
+}
+.day:nth-child(2) { animation-delay: 0.1s; }
+.day:nth-child(3) { animation-delay: 0.15s; }
+.day:nth-child(4) { animation-delay: 0.2s; }
+.day:nth-child(5) { animation-delay: 0.25s; }
+
+/* ============================================
+   Mobile tweaks
+   ============================================ */
+
+@media (max-width: 480px) {
+  .container { padding: 0 16px; }
+  .cover { padding: 32px 0 24px; margin-bottom: 28px; }
+  .cover-title { font-size: 32px; }
+  .day { margin-bottom: 40px; }
+  .day-map { height: 200px; }
+  .day-header { gap: 10px; }
+  .day-label { font-size: 22px; }
+  .pin { padding-left: 48px; padding-bottom: 22px; }
+  .pin-number { width: 34px; height: 34px; font-size: 13px; }
+  .pin:not(:last-child)::before { left: 16px; top: 28px; }
+  .travel { margin-left: 48px; }
+  .pin-name { font-size: 19px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <button id="lang-toggle" type="button" aria-label="Toggle language">日本語</button>
+  <button id="theme-toggle" type="button" aria-label="Toggle theme">◐</button>
+</div>
+
+<div id="app" class="container"></div>
+
+<!-- pako for gzip decoding -->
+<script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.inflate.min.js"
+        crossorigin="anonymous"></script>
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        crossorigin="anonymous"></script>
+
+<script>
+/* ============================================
+   i18n — Japanese / English
+   ============================================ */
+
+const I18N = {
+  ja: {
+    eyebrow: '旅のしおり',
+    day: 'Day',
+    members: '人',
+    membersUnit: '名',
+    timeUndefined: '時刻未定',
+    duration: '滞在',
+    minutes: '分',
+    hours: '時間',
+    coords: '座標',
+    openApple: 'Apple Maps',
+    openGoogle: 'Google Maps',
+    footerMark: 'Pinline',
+    footerNote: '地図とタイムラインで描く、旅のしおり',
+    errorInvalidTitle: 'リンクが無効です',
+    errorInvalidMsg: 'このリンクは壊れているか、データが含まれていません。共有元の方にもう一度送ってもらってください。',
+    errorVersionTitle: '新しいバージョンのリンクです',
+    errorVersionMsg: 'このリンクは新しいバージョンの Pinline で作成されました。アプリを最新にしてからもう一度お試しください。',
+    errorDecodeTitle: 'データを読み取れませんでした',
+    errorDecodeMsg: 'リンクが途中で切れている可能性があります。共有元の方にもう一度送ってもらってください。',
+    travelModes: {
+      walking: '徒歩', driving: '車', transit: '公共交通', flying: '飛行機',
+      cycling: '自転車', ferry: 'フェリー', taxi: 'タクシー', other: '移動'
+    },
+    activityTypes: {
+      sightseeing: '観光', meal: '食事', cafe: 'カフェ', shopping: '買い物',
+      lodging: '宿泊', activity: '体験', transport: '移動', other: 'その他'
+    },
+    months: ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'],
+    weekdays: ['日','月','火','水','木','金','土']
+  },
+  en: {
+    eyebrow: 'Travel Itinerary',
+    day: 'Day',
+    members: 'people',
+    membersUnit: '',
+    timeUndefined: 'Time TBD',
+    duration: 'Stay',
+    minutes: 'min',
+    hours: 'h',
+    coords: 'Coords',
+    openApple: 'Apple Maps',
+    openGoogle: 'Google Maps',
+    footerMark: 'Pinline',
+    footerNote: 'Travel itineraries woven from map & timeline',
+    errorInvalidTitle: 'Invalid link',
+    errorInvalidMsg: 'This link is broken or contains no data. Please ask the sender to share it again.',
+    errorVersionTitle: 'Newer version link',
+    errorVersionMsg: 'This link was created with a newer version of Pinline. Please update your app and try again.',
+    errorDecodeTitle: 'Could not read the data',
+    errorDecodeMsg: 'The link may have been truncated. Please ask the sender to share it again.',
+    travelModes: {
+      walking: 'Walk', driving: 'Car', transit: 'Transit', flying: 'Flight',
+      cycling: 'Bike', ferry: 'Ferry', taxi: 'Taxi', other: 'Travel'
+    },
+    activityTypes: {
+      sightseeing: 'Sightseeing', meal: 'Meal', cafe: 'Cafe', shopping: 'Shopping',
+      lodging: 'Lodging', activity: 'Activity', transport: 'Transit', other: 'Other'
+    },
+    months: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
+    weekdays: ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
+  }
+};
+
+const ACT_EMOJI = {
+  sightseeing: '🏛️', meal: '🍽️', cafe: '☕', shopping: '🛍️',
+  lodging: '🏨', activity: '🎢', transport: '✈️', other: '📍'
+};
+const MODE_EMOJI = {
+  walking: '🚶', driving: '🚗', transit: '🚊', flying: '✈️',
+  cycling: '🚴', ferry: '⛴️', taxi: '🚖', other: '➡️'
+};
+
+const SUPPORTED_VERSION = 1;
+
+/* ============================================
+   Language & theme state
+   ============================================ */
+
+function detectLang() {
+  const stored = localStorage.getItem('pinline-lang');
+  if (stored && I18N[stored]) return stored;
+  const browser = (navigator.language || 'en').toLowerCase();
+  return browser.startsWith('ja') ? 'ja' : 'en';
+}
+
+function detectTheme() {
+  const stored = localStorage.getItem('pinline-theme');
+  if (stored === 'light' || stored === 'dark') return stored;
+  return null; // auto
+}
+
+let lang = detectLang();
+let theme = detectTheme();
+
+function applyTheme() {
+  if (theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+  } else {
+    document.documentElement.removeAttribute('data-theme');
+  }
+}
+
+function t() {
+  return I18N[lang];
+}
+
+/* ============================================
+   Decode
+   ============================================ */
+
+function base64UrlToBytes(s) {
+  s = s.replace(/-/g, '+').replace(/_/g, '/');
+  const pad = s.length % 4 === 0 ? 0 : 4 - (s.length % 4);
+  s += '='.repeat(pad);
+  const bin = atob(s);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return bytes;
+}
+
+function decodeItinerary(d) {
+  const gz = base64UrlToBytes(d);
+  const json = pako.ungzip(gz, { to: 'string' });
+  return JSON.parse(json);
+}
+
+/* ============================================
+   Formatters
+   ============================================ */
+
+function formatDate(isoStr, withWeekday) {
+  if (!isoStr) return '';
+  const d = new Date(isoStr);
+  if (isNaN(d.getTime())) return '';
+  const tr = t();
+  const m = tr.months[d.getMonth()];
+  const day = d.getDate();
+  const wd = tr.weekdays[d.getDay()];
+  if (lang === 'ja') {
+    return withWeekday ? `${d.getFullYear()}年${m}${day}日 (${wd})` : `${m}${day}日`;
+  }
+  return withWeekday ? `${m} ${day}, ${d.getFullYear()} (${wd})` : `${m} ${day}`;
+}
+
+function formatDateRange(startIso, endIso) {
+  const s = new Date(startIso);
+  const e = new Date(endIso);
+  if (isNaN(s.getTime()) || isNaN(e.getTime())) return '';
+  if (lang === 'ja') {
+    return `${s.getFullYear()}年${s.getMonth()+1}月${s.getDate()}日 — ${e.getMonth()+1}月${e.getDate()}日`;
+  }
+  const tr = t();
+  return `${tr.months[s.getMonth()]} ${s.getDate()} — ${tr.months[e.getMonth()]} ${e.getDate()}, ${e.getFullYear()}`;
+}
+
+function formatTimeInTz(isoStr, tz) {
+  if (!isoStr) return null;
+  const d = new Date(isoStr);
+  if (isNaN(d.getTime())) return null;
+  try {
+    const opts = { hour: '2-digit', minute: '2-digit', hour12: false };
+    if (tz) opts.timeZone = tz;
+    return new Intl.DateTimeFormat(lang === 'ja' ? 'ja-JP' : 'en-GB', opts).format(d);
+  } catch (_) {
+    return d.toTimeString().slice(0, 5);
+  }
+}
+
+function tzAbbrev(tz) {
+  if (!tz) return null;
+  // Take last segment of IANA name, trim underscores
+  const seg = tz.split('/').pop().replace(/_/g, ' ');
+  // Common abbreviations
+  const map = {
+    'Tokyo': 'JST', 'Honolulu': 'HST', 'Los Angeles': 'PT', 'New York': 'ET',
+    'London': 'GMT', 'Paris': 'CET', 'Hong Kong': 'HKT', 'Singapore': 'SGT',
+    'Seoul': 'KST', 'Taipei': 'TWT', 'Bangkok': 'ICT', 'Sydney': 'AET',
+    'Dubai': 'GST', 'Auckland': 'NZT'
+  };
+  return map[seg] || seg.toUpperCase().slice(0, 4);
+}
+
+function formatDuration(min) {
+  if (!min || min <= 0) return '';
+  const tr = t();
+  if (min < 60) return `${min}${tr.minutes}`;
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  if (m === 0) return `${h}${tr.hours}`;
+  return lang === 'ja' ? `${h}${tr.hours}${m}${tr.minutes}` : `${h}${tr.hours} ${m}${tr.minutes}`;
+}
+
+function actLabel(act) {
+  return t().activityTypes[act] || act || '';
+}
+
+function modeLabel(mode) {
+  return t().travelModes[mode] || mode || '';
+}
+
+/* ============================================
+   Render
+   ============================================ */
+
+function escapeHtml(str) {
+  if (str == null) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function renderItinerary(data) {
+  const tr = t();
+  const app = document.getElementById('app');
+
+  // Set browser tab title
+  document.title = `${data.title || 'Pinline'} — Pinline`;
+  const desc = document.querySelector('meta[name="description"]');
+  if (desc && data.title) desc.setAttribute('content', `${data.title} | Pinline`);
+
+  const html = [];
+
+  // Cover
+  html.push(`
+    <header class="cover">
+      <div class="cover-eyebrow">${tr.eyebrow}</div>
+      <h1 class="cover-title">${escapeHtml(data.title || 'Untitled')}</h1>
+      <div class="cover-meta">
+        <span>${formatDateRange(data.start, data.end)}</span>
+        ${data.members ? `<span class="cover-meta-divider"></span><span>${data.members} ${tr.members}</span>` : ''}
+      </div>
+    </header>
+  `);
+
+  // Days
+  (data.days || []).forEach((day, dayIdx) => {
+    const pins = day.pins || [];
+    const mapId = `map-${dayIdx}`;
+
+    html.push(`<section class="day">`);
+    html.push(`
+      <div class="day-header">
+        <span class="day-number">${tr.day} ${day.n}</span>
+        <span class="day-label">${formatDate(day.date, false)}</span>
+        <span class="day-date">${formatDate(day.date, true)}</span>
+      </div>
+    `);
+
+    if (pins.length > 0 && pins.some(p => typeof p.lat === 'number' && typeof p.lng === 'number')) {
+      html.push(`<div class="day-map" id="${mapId}" aria-label="Day ${day.n} map"></div>`);
+    }
+
+    pins.forEach((pin, i) => {
+      html.push(renderPin(pin, i + 1));
+      // Travel segment between pins (only if not last)
+      if (i < pins.length - 1 && pin.tmin && pin.tmin > 0) {
+        const modeEmoji = MODE_EMOJI[pin.tmode] || MODE_EMOJI.other;
+        html.push(`
+          <div class="travel">
+            <span>${modeEmoji}</span>
+            <span>${escapeHtml(modeLabel(pin.tmode))} · ${formatDuration(pin.tmin)}</span>
+          </div>
+        `);
+      }
+    });
+
+    html.push(`</section>`);
+  });
+
+  // Footer
+  html.push(`
+    <footer class="footer">
+      <div class="footer-mark">Pinline</div>
+      <div class="footer-note">${tr.footerNote}</div>
+    </footer>
+  `);
+
+  app.innerHTML = html.join('');
+
+  // Initialize day maps after DOM insertion
+  (data.days || []).forEach((day, dayIdx) => {
+    const pins = (day.pins || []).filter(p => typeof p.lat === 'number' && typeof p.lng === 'number');
+    if (pins.length === 0) return;
+    const el = document.getElementById(`map-${dayIdx}`);
+    if (!el) return;
+    initDayMap(el, pins);
+  });
+}
+
+function renderPin(pin, num) {
+  const tr = t();
+  const timeStr = pin.time ? formatTimeInTz(pin.time, pin.tz) : null;
+  const tzLabel = pin.tz ? tzAbbrev(pin.tz) : null;
+  const dur = formatDuration(pin.dur);
+  const emoji = ACT_EMOJI[pin.act] || ACT_EMOJI.other;
+
+  const appleUrl = `http://maps.apple.com/?ll=${pin.lat},${pin.lng}&q=${encodeURIComponent(pin.name || '')}`;
+  const googleUrl = `https://www.google.com/maps/?q=${pin.lat},${pin.lng}`;
+
+  return `
+    <article class="pin">
+      <div class="pin-number">${num}</div>
+      <div class="pin-header">
+        ${timeStr
+          ? `<span class="pin-time">${timeStr}</span>${tzLabel ? `<span class="tz-badge">${tzLabel}</span>` : ''}`
+          : `<span class="pin-time-undefined">${tr.timeUndefined}</span>`
+        }
+        ${dur ? `<span class="pin-duration">${tr.duration} ${dur}</span>` : ''}
+      </div>
+      <h3 class="pin-name">${escapeHtml(pin.name || '')}</h3>
+      <div class="pin-act"><span>${emoji}</span><span>${escapeHtml(actLabel(pin.act))}</span></div>
+      ${pin.memo ? `<div class="pin-memo">${escapeHtml(pin.memo)}</div>` : ''}
+      ${(typeof pin.lat === 'number' && typeof pin.lng === 'number')
+        ? `<div class="pin-coords">${pin.lat.toFixed(4)}, ${pin.lng.toFixed(4)}</div>`
+        : ''}
+      <div class="pin-actions">
+        <a href="${appleUrl}" target="_blank" rel="noopener noreferrer">${tr.openApple}</a>
+        <a href="${googleUrl}" target="_blank" rel="noopener noreferrer">${tr.openGoogle}</a>
+      </div>
+    </article>
+  `;
+}
+
+/* ============================================
+   Map (Leaflet)
+   ============================================ */
+
+function initDayMap(container, pins) {
+  const systemDark = matchMedia('(prefers-color-scheme: dark)').matches;
+  const isDark = theme === 'dark' || (theme === null && systemDark);
+
+  const map = L.map(container, {
+    zoomControl: true,
+    attributionControl: true,
+    scrollWheelZoom: false,
+    tap: true
+  });
+
+  // OSM tiles — use carto light/dark for theme consistency
+  const tileUrl = isDark
+    ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+    : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+
+  L.tileLayer(tileUrl, {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    subdomains: 'abcd',
+    maxZoom: 19
+  }).addTo(map);
+
+  const latlngs = [];
+  pins.forEach((pin, i) => {
+    const latlng = [pin.lat, pin.lng];
+    latlngs.push(latlng);
+
+    const icon = L.divIcon({
+      className: '',
+      html: `<div class="pin-marker"><span>${i + 1}</span></div>`,
+      iconSize: [28, 28],
+      iconAnchor: [14, 28]
+    });
+
+    L.marker(latlng, { icon })
+      .addTo(map)
+      .bindPopup(`<strong>${escapeHtml(pin.name || '')}</strong>`);
+  });
+
+  // Connect pins with a thin line
+  if (latlngs.length >= 2) {
+    L.polyline(latlngs, {
+      color: isDark ? '#e87862' : '#c4452e',
+      weight: 2,
+      opacity: 0.6,
+      dashArray: '4,6'
+    }).addTo(map);
+  }
+
+  // Fit bounds
+  if (latlngs.length === 1) {
+    map.setView(latlngs[0], 14);
+  } else {
+    map.fitBounds(L.latLngBounds(latlngs), { padding: [30, 30] });
+  }
+}
+
+/* ============================================
+   Error rendering
+   ============================================ */
+
+function renderError(kind) {
+  const tr = t();
+  let title, msg;
+  if (kind === 'version') {
+    title = tr.errorVersionTitle;
+    msg = tr.errorVersionMsg;
+  } else if (kind === 'decode') {
+    title = tr.errorDecodeTitle;
+    msg = tr.errorDecodeMsg;
+  } else {
+    title = tr.errorInvalidTitle;
+    msg = tr.errorInvalidMsg;
+  }
+  document.getElementById('app').innerHTML = `
+    <div class="error-screen">
+      <div class="error-mark">⌖</div>
+      <h1 class="error-title">${title}</h1>
+      <p class="error-message">${msg}</p>
+    </div>
+  `;
+}
+
+/* ============================================
+   Boot
+   ============================================ */
+
+let currentData = null;
+
+function boot() {
+  applyTheme();
+
+  const params = new URLSearchParams(location.search);
+  const d = params.get('d');
+
+  if (!d) {
+    renderError('invalid');
+    return;
+  }
+
+  let data;
+  try {
+    data = decodeItinerary(d);
+  } catch (err) {
+    console.error('Decode failed:', err);
+    renderError('decode');
+    return;
+  }
+
+  if (!data || typeof data !== 'object') {
+    renderError('invalid');
+    return;
+  }
+
+  if (typeof data.v === 'number' && data.v > SUPPORTED_VERSION) {
+    renderError('version');
+    return;
+  }
+
+  currentData = data;
+  renderItinerary(data);
+}
+
+/* ============================================
+   Toggles
+   ============================================ */
+
+function updateToggleLabels() {
+  document.getElementById('lang-toggle').textContent = lang === 'ja' ? 'EN' : '日本語';
+  const themeBtn = document.getElementById('theme-toggle');
+  if (theme === 'dark') themeBtn.textContent = '☀';
+  else if (theme === 'light') themeBtn.textContent = '☾';
+  else themeBtn.textContent = '◐';
+}
+
+document.getElementById('lang-toggle').addEventListener('click', () => {
+  lang = lang === 'ja' ? 'en' : 'ja';
+  localStorage.setItem('pinline-lang', lang);
+  document.documentElement.setAttribute('lang', lang);
+  updateToggleLabels();
+  if (currentData) {
+    renderItinerary(currentData);
+  } else {
+    boot();
+  }
+});
+
+document.getElementById('theme-toggle').addEventListener('click', () => {
+  // Cycle: auto -> light -> dark -> auto
+  if (theme === null) theme = 'light';
+  else if (theme === 'light') theme = 'dark';
+  else theme = null;
+  if (theme) localStorage.setItem('pinline-theme', theme);
+  else localStorage.removeItem('pinline-theme');
+  applyTheme();
+  updateToggleLabels();
+  if (currentData) renderItinerary(currentData);
+});
+
+// React to system theme change in auto mode
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+  if (theme === null && currentData) renderItinerary(currentData);
+});
+
+document.documentElement.setAttribute('lang', lang);
+updateToggleLabels();
+boot();
+</script>
+
+</body>
+</html>
