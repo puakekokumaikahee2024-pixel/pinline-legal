@@ -578,7 +578,7 @@ body::before {
 <div id="app" class="container"></div>
 
 <!-- pako for gzip decoding -->
-<script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.inflate.min.js"
+<script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js"
         crossorigin="anonymous"></script>
 
 <!-- Leaflet JS -->
@@ -713,6 +713,9 @@ function base64UrlToBytes(s) {
 }
 
 function decodeItinerary(d) {
+  if (typeof pako === 'undefined' || !pako.ungzip) {
+    throw new Error('pako library is not loaded');
+  }
   const gz = base64UrlToBytes(d);
   const json = pako.ungzip(gz, { to: 'string' });
   return JSON.parse(json);
